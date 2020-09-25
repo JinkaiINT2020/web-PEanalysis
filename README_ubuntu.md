@@ -1,6 +1,6 @@
-# web-PEanalysis(CentOS7)
+# web-PEanalysis(Ubuntu18.04)
 
-- [Ubuntu18.04用](https://github.com/JinkaiINT2020/web-PEanalysis/blob/develop/README_ubuntu.md)
+- [CentOS7用](https://github.com/JinkaiINT2020/web-PEanalysis/blob/develop/README.md)
 
 ![upload-page](https://raw.githubusercontent.com/JinkaiINT2020/web-PEanalysis/readmeImage/web-PEanalysis-upload.png)
 
@@ -8,20 +8,29 @@
 
 PEファイルの表層解析、および動的解析を行い、解析結果を閲覧するプログラムです。動的解析に際しては、Cuckoo Sandboxにリクエストを送信することで解析を行います。また解析結果の項目を利用して、これまで解析したPEファイルの解析結果の検索や、統計情報の表示ができます。
 
-注意: 現在、動的解析はUbuntu18.04のみ対応しています。詳しくは[Ubuntu18.04のREADME](https://github.com/JinkaiINT2020/web-PEanalysis/blob/develop/README_ubuntu.md)をご覧ください。
-
 ## インストール
 
-Docker Composeを用いてweb-PEanalysisを起動する場合は、実行方法まで進めてください。
+Docker Composeを用いてweb-PEanalysisを起動する場合は、実行方法まで進めてください。ただし、Docker Composeを用いた起動の場合、動的解析を行うことができなくなります。
 
-### 使用環境
+### Cuckoo Sandbox 2.0.7
 
-インストールにおいて、以下の環境を想定しています。
+[cuckoo-vm](https://github.com/tdu-isl/cuckoo-vm)を使用することで、Cuckoo Sandboxをインストールできます。インストールの詳細は[cuckoo-vmのインストール](https://github.com/tdu-isl/cuckoo-vm#install)をご覧ください。
 
-- CentOS7
-- Python3.6
+注意: Cuckoo Sandboxをインストールしない状態でweb-PEanalysisを動かすことも可能ですが、動的解析を行うことができなくなります。
 
-### 必要となるPythonモジュール
+### web-PEanalysis
+
+#### 自動インストール
+
+- install-for-ubuntu.shを実行することで、必要となるPythonモジュールやソフトウェアを自動的にインストールできます。
+
+```
+$ sh install-for-ubuntu.sh
+```
+
+#### 手動インストール
+
+##### 必要となるPythonモジュール
 
 web-PEanalysisを動かすにあたり、必要となるPythonのモジュールは以下の通りです。
 
@@ -29,17 +38,15 @@ web-PEanalysisを動かすにあたり、必要となるPythonのモジュール
 
 ```
 # ssdeepを動かすために必要となるパッケージのインストール
-$ sudo yum groupinstall "Development Tools"
-$ sudo yum install epel-release
-$ sudo yum install libffi-devel python-devel python-pip ssdeep-devel ssdeep-libs
+$ sudo apt-get install build-essential libffi-dev python3 python3-dev python3-pip libfuzzy-dev
 # Pythonモジュールであるssdeepのインストール
-$ pip install ssdeep
+$ pip3 install ssdeep
 ```
 
 - [pyimpfuzzy](https://pypi.org/project/pyimpfuzzy/)
 
 ```
-$ pip install pyimpfuzzy
+$ pip3 install pyimpfuzzy
 ```
 
 - [pehash](https://github.com/knowmalware/pehash)
@@ -47,45 +54,38 @@ $ pip install pyimpfuzzy
 ```
 $ git clone https://github.com/knowmalware/pehash
 $ cd pehash
-$ python setup.py install
+$ sudo python3 setup.py install
 ```
 
 - [pefile](https://pypi.org/project/pefile/)
 
 ```
-$ pip install pefile
+$ pip3 install pefile
 ```
 
 - [flask](https://pypi.org/project/Flask/)
 
 ```
-$ pip install Flask
+$ pip3 install Flask
 ```
 
 - [pymongo](https://pypi.org/project/pymongo/)
 
 ```
-# mongodb4.0のインストール
-$ cat /etc/yum.repos.d/mongodb-org-4.0.repo
-[mongodb-org-4.0]
-name=MongoDB Repository
-baseurl=https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/4.0/x86_64/
-gpgcheck=1
-enabled=1
-gpgkey=https://www.mongodb.org/static/pgp/server-4.0.asc
-$ sudo yum install -y mongodb-org
+# mongodbのインストール
+$ sudo apt-get install mongodb
 
 # pymongoのインストール
-$ pip install pymongo
+$ pip3 install pymongo
 ```
 
 - [virustotal-api](https://pypi.org/project/virustotal-api/)
 
 ```
-$ pip install virustotal-api
+$ pip3 install virustotal-api
 ```
 
-### 必要となるソフトウェア
+##### 必要となるソフトウェア
 
 web-PEanalysisを動かすにあたり、必要となるソフトウェアは以下の通りです。どちらも、下のようにweb-PEanalysisディレクトリ直下に配置してください。
 
@@ -98,6 +98,9 @@ web-PEanalysis/
         PEiD
     trid/
         trid
+    winchecksec/
+        build/
+            winchecksec
     app.py
     config.py
 
@@ -112,7 +115,7 @@ PEiDではlibcrypto.so.1.0.0を使用するため、libcrypto.so.1.0.0が存在�
 ```
 $ mkdir PEiD
 $ cd PEiD
-$ curl -L https://github.com/K-atc/PEiD/releases/download/v0.1.1/PEiD > PEiD
+$ wget https://github.com/K-atc/PEiD/releases/download/v0.1.1/PEiD
 $ chmod 755 PEiD
 $ ./PEiD --prepare
 ```
@@ -125,9 +128,19 @@ $ cd trid
 $ curl http://mark0.net/download/trid_linux_64.zip > trid_linux_64.zip
 $ unzip trid_linux_64.zip
 $ chmod 755 trid
-$ curl http://mark0.net/download/tridupdate.zip > tridupdate.zip
+$ wget http://mark0.net/download/tridupdate.zip
 $ unzip tridupdate.zip
-$ python tridupdate.py
+$ python3 tridupdate.py
+```
+
+- [winchecksec](https://github.com/trailofbits/winchecksec)
+
+```
+$ mkdir winchecksec
+$ cd winchecksec
+$ wget https://github.com/trailofbits/winchecksec/releases/download/v2.0.0/ubuntu-latest.Release.zip
+$ unzip ubuntu-latest.Release.zip
+$ chmod 755 build/winchecksec
 ```
 
 ## 実行方法
@@ -150,6 +163,8 @@ CUCKOO_API_KEY = 'your ~/.cuckoo/conf/cuckoo.conf api_token value'
 注意: Docker Composeを用いて起動する場合、動的解析を行うことができなくなります。
 
 1. web-PEanalysisディレクトリへ移動します。
+2. Dockerfile-ubuntuをDockerfileへ移動します。
+    - `$ mv Dockerfile-ubuntu Dockerfile`
 3. 以下のコマンドを実行します。
     - `$ docker-compose up -d`
 4. `http://localhost:5000/` へアクセスします。
@@ -174,3 +189,4 @@ CUCKOO_API_KEY = 'your ~/.cuckoo/conf/cuckoo.conf api_token value'
     - `export table` をクリックすることで、 `http://localhost:5000/exports/<sha256>` に遷移します。
     - `pefile dump_info()` をクリックすることで、 `http://localhost:5000/pefile/<sha256>` に遷移します。
 - `http://localhost:5000/pefile/<sha256>` : sha256に対応したPEファイルのダンプ結果を表示します。
+- `http://localhost:8000` : Cuckoo Sandboxがインストールされている場合に移動することができる、Cuckoo SandboxのWeb UIです。このページから動的解析の解析結果を閲覧することができます。
